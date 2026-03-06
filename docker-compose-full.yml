@@ -15,24 +15,17 @@ services:
     deploy:
       resources:
         limits:
-          memory: 3G
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:11434/api/tags || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
+          memory: 2G
 
   # ── Ollama model puller ───────────────────────────────────────────────────
   ollama-pull:
     image: ollama/ollama:latest
     container_name: ollama-pull
     depends_on:
-      ollama:
-        condition: service_healthy
+      - ollama
     environment:
       - OLLAMA_HOST=http://ollama:11434
-    entrypoint: ["/bin/sh", "-c", "ollama pull ${OLLAMA_MODEL:-qwen3:1.7b} && echo 'Modello pronto'"]
+    entrypoint: ["/bin/sh", "-c", "sleep 5 && ollama pull ${OLLAMA_MODEL:-qwen3:1.7b} && echo 'Modello pronto'"]
     restart: "no"
 
   # ── CKAN MCP Server ───────────────────────────────────────────────────────
@@ -48,15 +41,6 @@ services:
     environment:
       TRANSPORT: http
       PORT: 3000
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "-X", "POST", "http://localhost:3000/mcp",
-             "-H", "Content-Type: application/json",
-             "-H", "Accept: application/json, text/event-stream",
-             "-d", '{"jsonrpc":"2.0","method":"tools/list","id":1}']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
 
   # ── Backend Node.js ───────────────────────────────────────────────────────
   backend:
@@ -76,10 +60,8 @@ services:
       # ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       # ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-haiku-4-5-20251001}
     depends_on:
-      ckan-mcp-server:
-        condition: service_healthy
-      ollama:
-        condition: service_healthy
+      - ckan-mcp-server
+      - ollama
 
   # ── Frontend React ────────────────────────────────────────────────────────
   frontend:
