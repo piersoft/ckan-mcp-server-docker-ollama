@@ -1,21 +1,35 @@
 import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
-import Anthropic from "@anthropic-ai/sdk";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001";
-const MCP_URL = process.env.MCP_URL || "http://192.168.0.126:3000/mcp";
+// ── Configurazione da variabili d'ambiente ────────────────────────────────────
+const SERVER_IP    = process.env.SERVER_IP    || "localhost";
+const PORT         = process.env.PORT         || 3001;
+const MCP_URL      = process.env.MCP_URL      || `http://${SERVER_IP}:3000/mcp`;
+const OLLAMA_URL   = process.env.OLLAMA_URL   || `http://${SERVER_IP}:11434`;
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:1.7b";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// Anthropic (opzionale)
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || null;
+const ANTHROPIC_MODEL   = process.env.ANTHROPIC_MODEL   || "claude-haiku-4-5-20251001";
 
-// ─── MCP helpers ─────────────────────────────────────────────────────────────
+const USE_ANTHROPIC = !!ANTHROPIC_API_KEY;
 
+console.log(`Motore LLM: ${USE_ANTHROPIC ? "Anthropic (" + ANTHROPIC_MODEL + ")" : "Ollama (" + OLLAMA_URL + " - " + OLLAMA_MODEL + ")"}`);
+console.log(`MCP URL: ${MCP_URL}`);
+
+// ── Importa Anthropic SDK solo se necessario ──────────────────────────────────
+let anthropic = null;
+if (USE_ANTHROPIC) {
+  const { default: Anthropic } = await import("@anthropic-ai/sdk");
+  anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+}
+
+// ── MCP helpers ───────────────────────────────────────────────────────────────
 let toolsCache = null;
 
 async function mcpCall(method, params = {}) {
@@ -27,7 +41,6 @@ async function mcpCall(method, params = {}) {
     },
     body: JSON.stringify({ jsonrpc: "2.0", method, params, id: Date.now() }),
   });
-
   const raw = await res.text();
   for (const line of raw.split("\n")) {
     const t = line.trim();
@@ -47,47 +60,88 @@ async function getTools() {
   return toolsCache;
 }
 
-function mcpToolToAnthropic(tool) {
-  return {
-    name: tool.name,
-    description: tool.description,
-    input_schema: tool.inputSchema ?? { type: "object", properties: {} },
-  };
-}
-
 async function callTool(name, args) {
   const res = await mcpCall("tools/call", { name, arguments: args });
   const content = res.result?.content ?? [];
   return content.map((c) => c.text ?? JSON.stringify(c)).join("\n");
 }
 
-// ─── Anthropic chat con tool loop ─────────────────────────────────────────────
-
-async function chatWithTools(messages, model) {
-  const tools = await getTools();
-  const anthropicTools = tools.map(mcpToolToAnthropic);
-  const toolCallsLog = [];
-
-  let history = messages.map((m) => ({
-    role: m.role,
-    content: m.content,
-  }));
-
-  const systemPrompt = `Sei un assistente esperto di open data. Hai accesso a strumenti per interrogare portali CKAN.
+const SYSTEM_PROMPT = `Sei un assistente esperto di open data. Hai accesso a strumenti per interrogare portali CKAN.
 Quando l'utente chiede di cercare dataset, usa SEMPRE gli strumenti disponibili per interrogare dati reali.
 Il portale principale è https://www.dati.gov.it/opendata (Italia), ma puoi usare qualsiasi URL CKAN.
 Rispondi sempre in italiano in modo chiaro e conciso. Presenta i risultati in modo leggibile.
 Se trovi dataset rilevanti, mostra: nome, organizzazione, descrizione breve e link.`;
 
+// ── Motore Ollama ─────────────────────────────────────────────────────────────
+async function chatWithOllama(messages, model) {
+  const tools = await getTools();
+  const ollamaTools = tools.map((t) => ({
+    type: "function",
+    function: {
+      name: t.name,
+      description: t.description,
+      parameters: t.inputSchema ?? { type: "object", properties: {} },
+    },
+  }));
+
+  const toolCallsLog = [];
+  let history = [{ role: "system", content: SYSTEM_PROMPT }, ...messages];
+
+  for (let round = 0; round < 5; round++) {
+    const res = await fetch(`${OLLAMA_URL}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: model || OLLAMA_MODEL,
+        messages: history,
+        tools: ollamaTools,
+        stream: false,
+        options: { temperature: 0.3 },
+      }),
+    });
+    if (!res.ok) throw new Error(`Ollama error ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    const msg = data.message;
+    history.push(msg);
+
+    if (!msg.tool_calls || msg.tool_calls.length === 0) {
+      return { reply: msg.content, toolCalls: toolCallsLog };
+    }
+
+    for (const tc of msg.tool_calls) {
+      const fnName = tc.function.name;
+      const fnArgs = tc.function.arguments ?? {};
+      console.log(`[tool] ${fnName}`, JSON.stringify(fnArgs).slice(0, 120));
+      toolCallsLog.push({ tool: fnName, args: fnArgs });
+      let result;
+      try { result = await callTool(fnName, fnArgs); }
+      catch (e) { result = `Errore: ${e.message}`; }
+      history.push({ role: "tool", content: result });
+    }
+  }
+  return { reply: "Nessuna risposta.", toolCalls: toolCallsLog };
+}
+
+// ── Motore Anthropic ──────────────────────────────────────────────────────────
+async function chatWithAnthropic(messages, model) {
+  const tools = await getTools();
+  const anthropicTools = tools.map((t) => ({
+    name: t.name,
+    description: t.description,
+    input_schema: t.inputSchema ?? { type: "object", properties: {} },
+  }));
+
+  const toolCallsLog = [];
+  let history = messages.map((m) => ({ role: m.role, content: m.content }));
+
   for (let round = 0; round < 5; round++) {
     const response = await anthropic.messages.create({
       model: model || ANTHROPIC_MODEL,
       max_tokens: 4096,
-      system: systemPrompt,
+      system: SYSTEM_PROMPT,
       tools: anthropicTools,
       messages: history,
     });
-
     history.push({ role: "assistant", content: response.content });
 
     if (response.stop_reason === "end_turn") {
@@ -105,38 +159,37 @@ Se trovi dataset rilevanti, mostra: nome, organizzazione, descrizione breve e li
         console.log(`[tool] ${block.name}`, JSON.stringify(block.input).slice(0, 120));
         toolCallsLog.push({ tool: block.name, args: block.input });
         let result;
-        try {
-          result = await callTool(block.name, block.input);
-        } catch (e) {
-          result = `Errore: ${e.message}`;
-        }
-        toolResults.push({
-          type: "tool_result",
-          tool_use_id: block.id,
-          content: result,
-        });
+        try { result = await callTool(block.name, block.input); }
+        catch (e) { result = `Errore: ${e.message}`; }
+        toolResults.push({ type: "tool_result", tool_use_id: block.id, content: result });
       }
       history.push({ role: "user", content: toolResults });
     }
   }
-
-  return { reply: "Nessuna risposta ottenuta.", toolCalls: toolCallsLog };
+  return { reply: "Nessuna risposta.", toolCalls: toolCallsLog };
 }
 
-// ─── Routes ──────────────────────────────────────────────────────────────────
-
+// ── Routes ────────────────────────────────────────────────────────────────────
 app.get("/api/models", async (req, res) => {
-  res.json([
-    { name: "claude-haiku-4-5-20251001" },
-    { name: "claude-sonnet-4-6" },
-  ]);
+  if (USE_ANTHROPIC) {
+    return res.json([
+      { name: "claude-haiku-4-5-20251001" },
+      { name: "claude-sonnet-4-6" },
+    ]);
+  }
+  try {
+    const r = await fetch(`${OLLAMA_URL}/api/tags`);
+    const data = await r.json();
+    res.json(data.models ?? []);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get("/api/tools", async (req, res) => {
   try {
     toolsCache = null;
-    const tools = await getTools();
-    res.json(tools);
+    res.json(await getTools());
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -145,12 +198,11 @@ app.get("/api/tools", async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   const { messages, model } = req.body;
   if (!messages?.length) return res.status(400).json({ error: "messages required" });
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return res.status(500).json({ error: "ANTHROPIC_API_KEY non impostata" });
-  }
   try {
-    const { reply, toolCalls } = await chatWithTools(messages, model);
-    res.json({ reply, toolCalls });
+    const result = USE_ANTHROPIC
+      ? await chatWithAnthropic(messages, model)
+      : await chatWithOllama(messages, model);
+    res.json(result);
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: e.message });
@@ -159,6 +211,12 @@ app.post("/api/chat", async (req, res) => {
 
 app.get("/api/health", async (req, res) => {
   const status = { backend: "ok", ollama: "n/a", mcp: "unknown" };
+  if (!USE_ANTHROPIC) {
+    try {
+      await fetch(`${OLLAMA_URL}/api/tags`);
+      status.ollama = "ok";
+    } catch { status.ollama = "error"; }
+  }
   try {
     await mcpCall("tools/list");
     status.mcp = "ok";
@@ -166,8 +224,7 @@ app.get("/api/health", async (req, res) => {
   res.json(status);
 });
 
-const PORT = process.env.PORT || 3001;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Backend pronto su http://localhost:${PORT}`);
-  console.log(`Raggiungibile su http://192.168.0.126:${PORT}`);
+  console.log(`Raggiungibile su http://${SERVER_IP}:${PORT}`);
 });
