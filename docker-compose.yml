@@ -73,7 +73,7 @@ services:
       # --- scegli UNO dei due motori ---
       # Opzione A: Ollama locale (tutto in locale)
       OLLAMA_URL: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:1.7b}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:0.5b}
       # Opzione B: Anthropic (commenta le 2 righe sopra e decommenta sotto)
       # ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       # ANTHROPIC_MODEL: claude-haiku-4-5-20251001
