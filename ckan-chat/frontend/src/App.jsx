@@ -98,8 +98,8 @@ export default function App() {
     <div className="app">
       <aside className="sidebar">
         <div className="sidebar-logo">
-          <div className="logo-icon">⬡</div>
-          <span className="logo-text">CKAN<br />Chat</span>
+          <div className="logo-icon">🇮🇹</div>
+          <span className="logo-text">Dati.gov.it<br />ChatBot</span>
         </div>
 
         <StatusBar health={health} onRefresh={fetchHealth} />
@@ -159,7 +159,7 @@ export default function App() {
         <div className="messages-container">
           {messages.length === 0 && (
             <div className="empty-state">
-              <div className="empty-icon">◈</div>
+              <div className="empty-icon">🏛️</div>
               <h2>Esplora i dati aperti italiani</h2>
               <p>
                 Chiedimi di cercare dataset su qualsiasi argomento.<br />
