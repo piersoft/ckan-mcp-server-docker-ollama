@@ -1,0 +1,48 @@
+{
+  "help": "https://dati.comune.messina.it/api/3/action/help_show?name=package_search",
+  "success": true,
+  "result": {
+    "count": 42,
+    "results": [
+      {
+        "id": "pkg-1",
+        "name": "ordinanze-viabili",
+        "title": "Ordinanze Viabili",
+        "notes": "Dataset delle ordinanze viabili.",
+        "organization": { "name": "comune-messina", "title": "Comune di Messina" },
+        "tags": [],
+        "resources": [
+          {
+            "id": "res-ds-1",
+            "name": "Ordinanze viabili",
+            "format": "CSV",
+            "datastore_active": true
+          },
+          {
+            "id": "res-plain-1",
+            "name": "Documentazione",
+            "format": "PDF",
+            "datastore_active": false
+          }
+        ]
+      },
+      {
+        "id": "pkg-2",
+        "name": "sezioni-elettorali",
+        "title": "Sezioni Elettorali",
+        "notes": "Localizzazione delle sezioni elettorali.",
+        "organization": { "name": "comune-messina", "title": "Comune di Messina" },
+        "tags": [],
+        "resources": [
+          {
+            "id": "res-plain-2",
+            "name": "Shapefile",
+            "format": "SHP",
+            "datastore_active": false
+          }
+        ]
+      }
+    ],
+    "facets": {}
+  }
+}

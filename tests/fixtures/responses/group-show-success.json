@@ -1,0 +1,25 @@
+{
+  "help": "http://demo.ckan.org/api/3/action/help_show?name=group_show",
+  "success": true,
+  "result": {
+    "id": "group-1",
+    "name": "environment",
+    "title": "Environment",
+    "description": "Environmental datasets",
+    "package_count": 12,
+    "created": "2024-01-05T12:00:00Z",
+    "state": "active",
+    "packages": [
+      {
+        "id": "pkg-1",
+        "name": "example-dataset",
+        "title": "Example Dataset"
+      },
+      {
+        "id": "pkg-2",
+        "name": "another-dataset",
+        "title": "Another Dataset"
+      }
+    ]
+  }
+}

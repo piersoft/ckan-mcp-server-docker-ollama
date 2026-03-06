@@ -1,0 +1,64 @@
+{
+  "@graph": [
+    {
+      "@id": "_:dataset-quality",
+      "dqv:isMeasurementOf": {
+        "@id": "https://piveau.eu/ns/voc#accessibilityScoring"
+      },
+      "dqv:value": {
+        "@value": "90",
+        "@type": "http://www.w3.org/2001/XMLSchema#int"
+      }
+    },
+    {
+      "@id": "_:dataset-quality",
+      "dqv:isMeasurementOf": {
+        "@id": "https://piveau.eu/ns/voc#findabilityScoring"
+      },
+      "dqv:value": {
+        "@value": "100",
+        "@type": "http://www.w3.org/2001/XMLSchema#int"
+      }
+    },
+    {
+      "@id": "_:dataset-quality",
+      "dqv:isMeasurementOf": {
+        "@id": "https://piveau.eu/ns/voc#interoperabilityScoring"
+      },
+      "dqv:value": {
+        "@value": "110",
+        "@type": "http://www.w3.org/2001/XMLSchema#int"
+      }
+    },
+    {
+      "@id": "_:dataset-quality",
+      "dqv:isMeasurementOf": {
+        "@id": "https://piveau.eu/ns/voc#reusabilityScoring"
+      },
+      "dqv:value": {
+        "@value": "75",
+        "@type": "http://www.w3.org/2001/XMLSchema#int"
+      }
+    },
+    {
+      "@id": "_:dataset-quality",
+      "dqv:isMeasurementOf": {
+        "@id": "https://piveau.eu/ns/voc#contextualityScoring"
+      },
+      "dqv:value": {
+        "@value": "20",
+        "@type": "http://www.w3.org/2001/XMLSchema#int"
+      }
+    },
+    {
+      "@id": "_:dataset-quality",
+      "dqv:isMeasurementOf": {
+        "@id": "https://piveau.eu/ns/voc#scoring"
+      },
+      "dqv:value": {
+        "@value": "395",
+        "@type": "http://www.w3.org/2001/XMLSchema#int"
+      }
+    }
+  ]
+}

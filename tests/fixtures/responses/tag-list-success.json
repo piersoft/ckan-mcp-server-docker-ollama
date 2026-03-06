@@ -1,0 +1,15 @@
+{
+  "help": "http://demo.ckan.org/api/3/action/help_show?name=package_search",
+  "success": true,
+  "result": {
+    "count": 100,
+    "search_facets": {
+      "tags": {
+        "items": [
+          { "name": "health", "count": 12, "display_name": "health" },
+          { "name": "data", "count": 7, "display_name": "data" }
+        ]
+      }
+    }
+  }
+}

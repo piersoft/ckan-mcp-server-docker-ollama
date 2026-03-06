@@ -1,0 +1,684 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Footer from '../components/Footer.astro';
+
+const baseUrl = '/ckan-mcp-server';
+---
+
+<Layout title="CKAN MCP Server - AI-Powered Open Data Exploration">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+    :root {
+      --navy: #0A1628;
+      --data-blue: #0066CC;
+      --teal: #0D9488;
+      --coral: #F97316;
+      --amber: #F59E0B;
+      --cream: #FFFEF9;
+      --gray-50: #F8FAFC;
+      --gray-100: #F1F5F9;
+      --gray-200: #E2E8F0;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --gray-900: #0F172A;
+    }
+
+    body {
+      font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+      color: var(--gray-900);
+      background: var(--cream);
+    }
+
+    .display-font {
+      font-family: 'Fraunces', Georgia, serif;
+      font-optical-sizing: auto;
+    }
+
+    .mono {
+      font-family: 'IBM Plex Mono', 'Courier New', monospace;
+    }
+
+    /* Animated grid background */
+    .data-grid {
+      background-image:
+        linear-gradient(to right, rgba(10, 22, 40, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(10, 22, 40, 0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      animation: gridShift 20s linear infinite;
+    }
+
+    @keyframes gridShift {
+      0% { background-position: 0 0; }
+      100% { background-position: 48px 48px; }
+    }
+
+    /* Hero number animation */
+    .stat-number {
+      display: inline-block;
+      font-variant-numeric: tabular-nums;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .fade-in-up {
+      animation: fadeInUp 0.8s ease-out forwards;
+    }
+
+    /* Feature card hover effect */
+    .feature-card {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0, 102, 204, 0.05), transparent);
+      transition: left 0.5s;
+    }
+
+    .feature-card:hover::before {
+      left: 100%;
+    }
+
+    /* Code block styling */
+    .code-block {
+      background: var(--navy);
+      border-left: 3px solid var(--data-blue);
+      position: relative;
+    }
+
+    .code-block::after {
+      content: 'JSON';
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: rgba(255, 255, 255, 0.3);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* Portal card 3D effect */
+    .portal-card {
+      transform: translateZ(0);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .portal-card:hover {
+      transform: translateY(-4px) translateZ(0);
+      box-shadow:
+        0 10px 25px -5px rgba(0, 0, 0, 0.1),
+        0 10px 10px -5px rgba(0, 0, 0, 0.04),
+        0 0 0 1px rgba(0, 102, 204, 0.1);
+    }
+
+    /* Connecting lines decoration */
+    .connection-line {
+      position: relative;
+    }
+
+    .connection-line::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: -40px;
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, transparent, var(--gray-200), transparent);
+    }
+  </style>
+
+  <main class="bg-cream">
+    <!-- Hero Section -->
+    <section class="relative py-24 px-4 sm:px-6 lg:px-8 overflow-hidden data-grid">
+      <div class="max-w-5xl mx-auto">
+        <!-- Decorative elements -->
+        <div class="absolute top-20 right-10 w-32 h-32 rounded-full bg-teal opacity-5 blur-3xl"></div>
+        <div class="absolute bottom-20 left-10 w-40 h-40 rounded-full bg-data-blue opacity-5 blur-3xl"></div>
+
+        <div class="relative z-10">
+          <!-- Eyebrow -->
+          <div class="flex items-center justify-center gap-3 mb-8 fade-in-up">
+            <span class="mono text-xs font-medium tracking-widest uppercase text-gray-600 bg-white px-4 py-2 rounded-full border border-gray-200">
+              MCP Protocol
+            </span>
+            <span class="mono text-xs font-medium tracking-widest uppercase text-gray-600 bg-white px-4 py-2 rounded-full border border-gray-200">
+              Open Source
+            </span>
+          </div>
+
+          <h1 class="display-font text-6xl sm:text-7xl lg:text-8xl font-bold text-center text-navy mb-8 leading-tight fade-in-up" style="animation-delay: 0.1s">
+            Explore Open Data <br/><span class="text-data-blue">with AI</span>
+          </h1>
+
+          <p class="text-xl sm:text-2xl text-center text-gray-700 mb-6 max-w-3xl mx-auto fade-in-up" style="animation-delay: 0.2s">
+            Turn any CKAN open data portal into a conversation.
+          </p>
+
+          <p class="text-lg text-center text-gray-600 mb-12 max-w-2xl mx-auto fade-in-up" style="animation-delay: 0.3s">
+            Give your AI assistant direct access to any CKAN open data portal — search datasets, explore organizations, query tabular data, and read metadata, all through natural language. No CKAN knowledge required.
+          </p>
+
+          <!-- CTA -->
+          <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16 fade-in-up" style="animation-delay: 0.4s">
+            <a
+              href="#install"
+              class="inline-block bg-data-blue text-white px-10 py-4 rounded-none font-semibold hover:bg-navy transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
+            >
+              Get Started →
+            </a>
+            <a
+              href="https://github.com/ondata/ckan-mcp-server"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-block bg-transparent text-navy px-10 py-4 rounded-none font-semibold border-2 border-navy hover:bg-navy hover:text-white transition-all duration-300"
+            >
+              View on GitHub
+            </a>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Demo GIF Section -->
+    <section class="hidden md:block py-12 px-4 sm:px-6 lg:px-8 bg-white">
+      <div class="max-w-4xl mx-auto">
+        <img
+          src={`${baseUrl}/mcp_server_demo.gif`}
+          alt="CKAN MCP Server demo — searching datasets through natural language"
+          class="w-full border border-gray-200 shadow-lg"
+        />
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="py-24 px-4 sm:px-6 lg:px-8 bg-white">
+      <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-20">
+          <h2 class="display-font text-5xl font-bold text-navy mb-6">
+            Why CKAN MCP Server?
+          </h2>
+          <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+            Purpose-built for researchers, data scientists, and journalists working with open data
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div class="feature-card p-8 bg-gray-50 border-l-4 border-data-blue">
+            <div class="mono text-sm font-medium text-data-blue mb-4 tracking-wider">01</div>
+            <h3 class="display-font text-2xl font-semibold text-navy mb-3">Advanced Search</h3>
+            <p class="text-gray-600 leading-relaxed">
+              Use Solr syntax for powerful queries: fuzzy matching, proximity search, date ranges, boosting, and complex boolean logic.
+            </p>
+          </div>
+
+          <div class="feature-card p-8 bg-gray-50 border-l-4 border-teal">
+            <div class="mono text-sm font-medium text-teal mb-4 tracking-wider">02</div>
+            <h3 class="display-font text-2xl font-semibold text-navy mb-3">DataStore Queries</h3>
+            <p class="text-gray-600 leading-relaxed">
+              Query tabular data directly with filters, sorting, and SQL support. Analyze datasets without downloading files.
+            </p>
+          </div>
+
+          <div class="feature-card p-8 bg-gray-50 border-l-4 border-coral">
+            <div class="mono text-sm font-medium text-coral mb-4 tracking-wider">03</div>
+            <h3 class="display-font text-2xl font-semibold text-navy mb-3">Hundreds of Portals</h3>
+            <p class="text-gray-600 leading-relaxed">
+              Connect to any CKAN portal worldwide: dati.gov.it, data.gov, data.europa.eu, and hundreds more.
+            </p>
+          </div>
+
+          <div class="feature-card p-8 bg-gray-50 border-l-4 border-amber">
+            <div class="mono text-sm font-medium text-amber mb-4 tracking-wider">04</div>
+            <h3 class="display-font text-2xl font-semibold text-navy mb-3">Natural Language</h3>
+            <p class="text-gray-600 leading-relaxed">
+              Ask questions in plain language. AI converts your intent into precise CKAN API queries automatically.
+            </p>
+          </div>
+
+          <div class="feature-card p-8 bg-gray-50 border-l-4 border-data-blue">
+            <div class="mono text-sm font-medium text-data-blue mb-4 tracking-wider">05</div>
+            <h3 class="display-font text-2xl font-semibold text-navy mb-3">Rich Metadata</h3>
+            <p class="text-gray-600 leading-relaxed">
+              Access complete dataset metadata, organization details, tags, groups, and quality metrics (MQA).
+            </p>
+          </div>
+
+          <div class="feature-card p-8 bg-gray-50 border-l-4 border-teal">
+            <div class="mono text-sm font-medium text-teal mb-4 tracking-wider">06</div>
+            <h3 class="display-font text-2xl font-semibold text-navy mb-3">Developer Friendly</h3>
+            <p class="text-gray-600 leading-relaxed">
+              TypeScript, 200+ automated tests, comprehensive docs. Install via npm or deploy to Cloudflare Workers.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Installation Section -->
+    <section id="install" class="py-24 px-4 sm:px-6 lg:px-8 bg-cream">
+      <div class="max-w-4xl mx-auto">
+        <div class="text-center mb-16 connection-line">
+          <h2 class="display-font text-5xl font-bold text-navy mb-4">
+            Quick Start
+          </h2>
+          <p class="text-lg text-gray-600">
+            Choose your preferred installation method
+          </p>
+        </div>
+
+        <div class="space-y-12">
+          <!-- Zero Setup Option -->
+          <div class="relative bg-data-blue overflow-hidden">
+            <div class="p-8">
+              <div class="mono text-xs font-medium tracking-widest uppercase mb-2 text-blue-200">Fastest way to start</div>
+              <h3 class="display-font text-2xl font-semibold text-white mb-2">No Install — Use the Hosted Endpoint</h3>
+              <p class="text-blue-100 mb-5">Just point your MCP client at this URL — nothing to install:</p>
+              <div class="bg-navy p-4 overflow-x-auto border-l-4 border-white border-opacity-30">
+                <pre class="mono text-sm text-gray-100 leading-relaxed whitespace-pre-wrap break-all">https://ckan-mcp-server.andy-pr.workers.dev/mcp</pre>
+              </div>
+              <p class="mono text-xs text-blue-200 mt-3">100,000 requests/day shared quota · Free · Works with any MCP client</p>
+            </div>
+          </div>
+
+          <!-- Zero Setup — ChatGPT + Claude Desktop side by side -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- ChatGPT -->
+            <div class="bg-white border border-gray-200 p-6">
+              <div class="flex items-center gap-3 mb-4">
+                <svg class="w-6 h-6 text-gray-800 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855l-5.833-3.387L15.119 7.2a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023l-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135l-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.795.795 0 0 0-.393.681zm1.097-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z"/></svg>
+                <h4 class="display-font text-lg font-semibold text-navy">ChatGPT</h4>
+                <span class="mono text-xs text-gray-400 ml-auto">Plus / Team / Enterprise</span>
+              </div>
+              <ol class="space-y-2 text-sm text-gray-600">
+                <li class="flex gap-2"><span class="mono text-data-blue font-medium flex-shrink-0">1.</span><span>Profile menu → <strong>Settings → Apps → Advanced settings</strong></span></li>
+                <li class="flex gap-2"><span class="mono text-data-blue font-medium flex-shrink-0">2.</span><span>Enable <strong>Developer mode</strong></span></li>
+                <li class="flex gap-2"><span class="mono text-data-blue font-medium flex-shrink-0">3.</span><span>Click <strong>Create app</strong> (top-right)</span></li>
+                <li class="flex gap-2"><span class="mono text-data-blue font-medium flex-shrink-0">4.</span><span>Name: <em>CKAN MCP Server</em> · URL: the endpoint above · Auth: <em>No Auth</em></span></li>
+                <li class="flex gap-2"><span class="mono text-data-blue font-medium flex-shrink-0">5.</span><span>In a new chat: <strong>+</strong> → <strong>More</strong> → select <em>CKAN MCP Server</em></span></li>
+              </ol>
+            </div>
+
+            <!-- Claude Desktop -->
+            <div class="bg-white border border-gray-200 p-6">
+              <div class="flex items-center gap-3 mb-4">
+                <img src={`${baseUrl}/icon-claude.svg`} alt="Claude" class="w-6 h-6 flex-shrink-0" />
+                <h4 class="display-font text-lg font-semibold text-navy">Claude Desktop</h4>
+              </div>
+              <ol class="space-y-2 text-sm text-gray-600">
+                <li class="flex gap-2"><span class="mono text-data-blue font-medium flex-shrink-0">1.</span><span><strong>Settings → Integrations</strong></span></li>
+                <li class="flex gap-2"><span class="mono text-data-blue font-medium flex-shrink-0">2.</span><span>Click <strong>Add custom integration</strong></span></li>
+                <li class="flex gap-2"><span class="mono text-data-blue font-medium flex-shrink-0">3.</span><span>Name: <em>CKAN MCP Server</em> · URL: the endpoint above</span></li>
+                <li class="flex gap-2"><span class="mono text-data-blue font-medium flex-shrink-0">4.</span><span>Click <strong>Add</strong> to save</span></li>
+                <li class="flex gap-2"><span class="mono text-data-blue font-medium flex-shrink-0">5.</span><span>New chat → <strong>+</strong> → Integrations → enable <em>CKAN MCP Server</em></span></li>
+              </ol>
+            </div>
+          </div>
+
+          <!-- Claude Desktop (local install) -->
+          <div class="relative bg-white border border-gray-200 overflow-hidden">
+            <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-data-blue to-teal"></div>
+            <div class="p-8">
+              <h3 class="display-font text-2xl font-semibold text-navy mb-2">
+                Claude Desktop
+              </h3>
+              <p class="text-gray-600 mb-4">
+                Add to your Claude Desktop configuration file:
+              </p>
+              <div class="code-block rounded-none p-5 overflow-x-auto">
+                <pre class="mono text-sm text-gray-100 leading-relaxed"><code>{`{
+  "mcpServers": {
+    "ckan": {
+      "command": "npx",
+      "args": ["@aborruso/ckan-mcp-server@latest"]
+    }
+  }
+}`}</code></pre>
+              </div>
+              <p class="mono text-xs text-gray-500 mt-4">
+                Config: <code class="bg-gray-100 px-2 py-1">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+              </p>
+            </div>
+          </div>
+
+          <!-- VS Code / Cursor -->
+          <div class="relative bg-white border border-gray-200 overflow-hidden">
+            <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-teal to-coral"></div>
+            <div class="p-8">
+              <h3 class="display-font text-2xl font-semibold text-navy mb-2">
+                VS Code / Cursor
+              </h3>
+              <p class="text-gray-600 mb-4">
+                Add to your MCP settings:
+              </p>
+              <div class="code-block rounded-none p-5 overflow-x-auto">
+                <pre class="mono text-sm text-gray-100 leading-relaxed"><code>{`{
+  "mcpServers": {
+    "ckan": {
+      "command": "npx",
+      "args": ["@aborruso/ckan-mcp-server@latest"]
+    }
+  }
+}`}</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cloudflare Workers -->
+          <div class="relative bg-white border border-gray-200 overflow-hidden">
+            <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-coral to-amber"></div>
+            <div class="p-8">
+              <h3 class="display-font text-2xl font-semibold text-navy mb-2">
+                Cloudflare Workers
+              </h3>
+              <p class="text-gray-600 mb-4">
+                Use the public endpoint (no installation required):
+              </p>
+              <div class="code-block rounded-none p-5 overflow-x-auto">
+                <pre class="mono text-sm text-gray-100 leading-relaxed"><code>{`{
+  "mcpServers": {
+    "ckan": {
+      "url": "https://ckan-mcp-server.andy-pr.workers.dev/mcp"
+    }
+  }
+}`}</code></pre>
+              </div>
+              <div class="mt-4 p-4 bg-amber bg-opacity-10 border border-amber border-opacity-30">
+                <p class="mono text-sm text-amber-900">
+                  💡 Free tier: 100,000 requests/day shared quota - sufficient for most users. For heavy usage, install locally.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Global Install -->
+          <div class="relative bg-white border border-gray-200 overflow-hidden">
+            <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amber to-data-blue"></div>
+            <div class="p-8">
+              <h3 class="display-font text-2xl font-semibold text-navy mb-2">
+                Global Installation
+              </h3>
+              <p class="text-gray-600 mb-4">
+                Install globally via npm:
+              </p>
+              <div class="code-block rounded-none p-5 overflow-x-auto">
+                <pre class="mono text-sm text-gray-100 leading-relaxed"><code>npm install -g @aborruso/ckan-mcp-server</code></pre>
+              </div>
+              <p class="text-gray-600 mt-6 mb-4">
+                Then use in your MCP config:
+              </p>
+              <div class="code-block rounded-none p-5 overflow-x-auto">
+                <pre class="mono text-sm text-gray-100 leading-relaxed"><code>{`{
+  "mcpServers": {
+    "ckan": {
+      "command": "ckan-mcp-server"
+    }
+  }
+}`}</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- See it in action Section -->
+    <section class="py-24 px-4 sm:px-6 lg:px-8 bg-cream">
+      <div class="max-w-4xl mx-auto">
+        <div class="text-center mb-12">
+          <h2 class="display-font text-5xl font-bold text-navy mb-4">See it in action</h2>
+          <p class="text-lg text-gray-600">Just ask in plain language — no query syntax needed</p>
+        </div>
+        <div class="bg-white border border-gray-200 p-8">
+          <blockquote class="text-xl text-gray-700 italic border-l-4 border-data-blue pl-6 mb-8 leading-relaxed">
+            "Search dati.gov.it for datasets about air quality in Milan, then summarize what each contains — time coverage, license, and best download format."
+          </blockquote>
+          <p class="text-gray-600 leading-relaxed">
+            The server finds 31 datasets, groups them by structural pattern, and returns a clear summary — including series names, years covered, publisher, and format.
+          </p>
+        </div>
+
+        <div class="mt-10 p-6 bg-white border border-gray-200 text-center">
+          <p class="text-gray-600">
+            Also works with <strong>ChatGPT</strong>, <strong>Claude Code</strong>, <strong>Gemini CLI</strong>, and <strong>Codex CLI</strong>.
+            See the <a href="https://github.com/ondata/ckan-mcp-server#-use-it-in-your-favorite-tool" target="_blank" rel="noopener noreferrer" class="text-data-blue hover:underline font-medium">full setup guide</a> for step-by-step instructions.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Use Cases Section -->
+    <section class="py-24 px-4 sm:px-6 lg:px-8 bg-white">
+      <div class="max-w-5xl mx-auto">
+        <div class="text-center mb-20">
+          <h2 class="display-font text-5xl font-bold text-navy mb-6">
+            Perfect For
+          </h2>
+          <p class="text-lg text-gray-600 mb-2">
+            Everyone. No CKAN knowledge required.
+          </p>
+          <p class="text-base text-gray-500">
+            Journalists looking for data to verify a story. Researchers exploring public datasets. Public servants checking what data their administration publishes. Developers building data pipelines.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div class="flex gap-5 p-6 border-l-2 border-data-blue bg-gray-50">
+            <div class="display-font text-3xl font-bold text-data-blue opacity-20">01</div>
+            <div>
+              <h3 class="display-font text-xl font-semibold text-navy mb-2">Researchers</h3>
+              <p class="text-gray-600 leading-relaxed">
+                Quickly find and analyze datasets for academic studies, literature reviews, and data-driven research.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex gap-5 p-6 border-l-2 border-teal bg-gray-50">
+            <div class="display-font text-3xl font-bold text-teal opacity-20">02</div>
+            <div>
+              <h3 class="display-font text-xl font-semibold text-navy mb-2">Data Scientists</h3>
+              <p class="text-gray-600 leading-relaxed">
+                Explore public datasets for machine learning projects, exploratory analysis, and data enrichment.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex gap-5 p-6 border-l-2 border-coral bg-gray-50">
+            <div class="display-font text-3xl font-bold text-coral opacity-20">03</div>
+            <div>
+              <h3 class="display-font text-xl font-semibold text-navy mb-2">Public Sector</h3>
+              <p class="text-gray-600 leading-relaxed">
+                Monitor open data quality, discover datasets from other agencies, and ensure metadata compliance.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex gap-5 p-6 border-l-2 border-amber bg-gray-50">
+            <div class="display-font text-3xl font-bold text-amber opacity-20">04</div>
+            <div>
+              <h3 class="display-font text-xl font-semibold text-navy mb-2">Students</h3>
+              <p class="text-gray-600 leading-relaxed">
+                Access real-world data for coursework, thesis projects, and learning data analysis techniques.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex gap-5 p-6 border-l-2 border-data-blue bg-gray-50">
+            <div class="display-font text-3xl font-bold text-data-blue opacity-20">05</div>
+            <div>
+              <h3 class="display-font text-xl font-semibold text-navy mb-2">Journalists</h3>
+              <p class="text-gray-600 leading-relaxed">
+                Discover data for investigative reporting, fact-checking, and data-driven storytelling.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex gap-5 p-6 border-l-2 border-teal bg-gray-50">
+            <div class="display-font text-3xl font-bold text-teal opacity-20">06</div>
+            <div>
+              <h3 class="display-font text-xl font-semibold text-navy mb-2">Open Data Advocates</h3>
+              <p class="text-gray-600 leading-relaxed">
+                Monitor portal activity, track data releases, and promote transparency initiatives.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Portals Section -->
+    <section class="py-24 px-4 sm:px-6 lg:px-8 bg-cream">
+      <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-16">
+          <h2 class="display-font text-5xl font-bold text-navy mb-4">
+            Supported Portals
+          </h2>
+          <p class="text-lg text-gray-600">
+            Connect to any CKAN-based open data portal worldwide
+          </p>
+          <p class="text-sm text-gray-500 mt-2">
+            Verified portals with public API access
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <a
+            href="https://www.dati.gov.it/opendata"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="portal-card bg-white p-6 border border-gray-200"
+          >
+            <div class="flex items-center gap-3 mb-3">
+              <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/1f1ee-1f1f9.svg" alt="🇮🇹" class="w-8 h-8" />
+              <h3 class="display-font text-xl font-semibold text-navy">dati.gov.it</h3>
+            </div>
+            <p class="text-sm text-gray-600">Italian National Open Data Portal</p>
+          </a>
+
+          <a
+            href="https://catalog.data.gov"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="portal-card bg-white p-6 border border-gray-200"
+          >
+            <div class="flex items-center gap-3 mb-3">
+              <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/1f1fa-1f1f8.svg" alt="🇺🇸" class="w-8 h-8" />
+              <h3 class="display-font text-xl font-semibold text-navy">catalog.data.gov</h3>
+            </div>
+            <p class="text-sm text-gray-600">United States Open Data</p>
+          </a>
+
+          <a
+            href="https://open.canada.ca/data"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="portal-card bg-white p-6 border border-gray-200"
+          >
+            <div class="flex items-center gap-3 mb-3">
+              <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/1f1e8-1f1e6.svg" alt="🇨🇦" class="w-8 h-8" />
+              <h3 class="display-font text-xl font-semibold text-navy">open.canada.ca</h3>
+            </div>
+            <p class="text-sm text-gray-600">Canada Open Government</p>
+          </a>
+
+          <a
+            href="https://data.gov.au"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="portal-card bg-white p-6 border border-gray-200"
+          >
+            <div class="flex items-center gap-3 mb-3">
+              <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/1f1e6-1f1fa.svg" alt="🇦🇺" class="w-8 h-8" />
+              <h3 class="display-font text-xl font-semibold text-navy">data.gov.au</h3>
+            </div>
+            <p class="text-sm text-gray-600">Australian Government Open Data</p>
+          </a>
+
+          <a
+            href="https://data.gov.uk"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="portal-card bg-white p-6 border border-gray-200"
+          >
+            <div class="flex items-center gap-3 mb-3">
+              <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/1f1ec-1f1e7.svg" alt="🇬🇧" class="w-8 h-8" />
+              <h3 class="display-font text-xl font-semibold text-navy">data.gov.uk</h3>
+            </div>
+            <p class="text-sm text-gray-600">United Kingdom Open Data</p>
+          </a>
+
+          <a
+            href="https://opendata.swiss/en/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="portal-card bg-white p-6 border border-gray-200"
+          >
+            <div class="flex items-center gap-3 mb-3">
+              <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/1f1e8-1f1ed.svg" alt="🇨🇭" class="w-8 h-8" />
+              <h3 class="display-font text-xl font-semibold text-navy">opendata.swiss</h3>
+            </div>
+            <p class="text-sm text-gray-600">Swiss Open Data Portal</p>
+          </a>
+        </div>
+
+        <p class="text-center mono text-sm text-gray-500 mt-12 tracking-wider uppercase">
+          + hundreds more CKAN portals worldwide
+        </p>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-24 px-4 sm:px-6 lg:px-8 bg-navy relative overflow-hidden">
+      <!-- Decorative background -->
+      <div class="absolute inset-0 opacity-10">
+        <div class="absolute top-0 left-0 w-full h-full" style="background-image: linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 40px 40px;"></div>
+      </div>
+
+      <div class="max-w-4xl mx-auto text-center relative z-10">
+        <h2 class="display-font text-5xl sm:text-6xl font-bold text-white mb-6">
+          Ready to explore<br/>open data with AI?
+        </h2>
+        <p class="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
+          Install CKAN MCP Server in minutes and start querying hundreds of portals
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a
+            href="https://github.com/ondata/ckan-mcp-server/blob/main/README.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-block bg-white text-navy px-10 py-4 rounded-none font-semibold hover:bg-cream transition-all duration-300 hover:scale-105"
+          >
+            Full README →
+          </a>
+          <a
+            href="https://github.com/ondata/ckan-mcp-server"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-block bg-transparent text-white px-10 py-4 rounded-none font-semibold border-2 border-white hover:bg-white hover:text-navy transition-all duration-300"
+          >
+            GitHub
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>

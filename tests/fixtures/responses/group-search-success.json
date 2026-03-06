@@ -1,0 +1,15 @@
+{
+  "help": "http://demo.ckan.org/api/3/action/help_show?name=package_search",
+  "success": true,
+  "result": {
+    "count": 42,
+    "search_facets": {
+      "groups": {
+        "items": [
+          { "name": "environment", "count": 12, "display_name": "Environment" },
+          { "name": "health", "count": 7, "display_name": "Health" }
+        ]
+      }
+    }
+  }
+}

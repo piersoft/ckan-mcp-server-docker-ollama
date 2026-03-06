@@ -1,0 +1,46 @@
+{
+  "help": "https://dati.comune.messina.it/api/3/action/help_show?name=datastore_search",
+  "success": true,
+  "result": {
+    "resource_id": "res-ds-1",
+    "total": 2222,
+    "records": [],
+    "fields": [
+      {
+        "id": "_id",
+        "type": "int"
+      },
+      {
+        "id": "numero",
+        "type": "numeric",
+        "info": {
+          "label": "Numero ordinanza",
+          "notes": "Numero progressivo dell'ordinanza viabile",
+          "type_override": ""
+        }
+      },
+      {
+        "id": "data_pubblicazione",
+        "type": "timestamp",
+        "info": {
+          "label": "Data di pubblicazione",
+          "notes": "Data in formato ISO 8601",
+          "type_override": ""
+        }
+      },
+      {
+        "id": "tipo",
+        "type": "text",
+        "info": {
+          "label": "Tipo di provvedimento",
+          "notes": "",
+          "type_override": ""
+        }
+      },
+      {
+        "id": "sintesi",
+        "type": "text"
+      }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "help": "http://demo.ckan.org/api/3/action/help_show?name=group_list",
+  "success": true,
+  "result": [
+    {
+      "id": "group-1",
+      "name": "environment",
+      "title": "Environment",
+      "description": "Environmental datasets",
+      "package_count": 12,
+      "created": "2024-01-05T12:00:00Z"
+    },
+    {
+      "id": "group-2",
+      "name": "health",
+      "title": "Health",
+      "description": "Health datasets",
+      "package_count": 7,
+      "created": "2024-01-10T12:00:00Z"
+    }
+  ]
+}
