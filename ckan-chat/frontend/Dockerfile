@@ -16,6 +16,9 @@ RUN echo 'server { \
   index index.html; \
   location /api/ { \
     proxy_pass http://backend:3001; \
+    proxy_read_timeout 300s; \
+    proxy_connect_timeout 30s; \
+    proxy_send_timeout 300s; \
   } \
   location / { \
     try_files $uri $uri/ /index.html; \
