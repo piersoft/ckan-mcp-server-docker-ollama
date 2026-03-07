@@ -6,30 +6,24 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ── Configurazione da variabili d'ambiente ────────────────────────────────────
-const SERVER_IP    = process.env.SERVER_IP    || "localhost";
-const PORT         = process.env.PORT         || 3001;
-const MCP_URL      = process.env.MCP_URL      || `http://${SERVER_IP}:3000/mcp`;
-const OLLAMA_URL   = process.env.OLLAMA_URL   || `http://${SERVER_IP}:11434`;
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:1.7b";
+// ─── Configurazione provider ──────────────────────────────────────────────────
+const LLM_PROVIDER = process.env.LLM_PROVIDER || "mistral"; // "mistral" | "ollama"
+const MCP_URL = process.env.MCP_URL || "http://ckan-mcp-server:3000/mcp";
 
-// Anthropic (opzionale)
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || null;
-const ANTHROPIC_MODEL   = process.env.ANTHROPIC_MODEL   || "claude-haiku-4-5-20251001";
+// Mistral
+const MISTRAL_API_KEY   = process.env.MISTRAL_API_KEY;
+const MISTRAL_MODEL     = process.env.MISTRAL_MODEL || "mistral-small-latest";
+const MISTRAL_API_URL   = "https://api.mistral.ai/v1/chat/completions";
 
-const USE_ANTHROPIC = !!ANTHROPIC_API_KEY;
+// Ollama
+const OLLAMA_URL   = process.env.OLLAMA_URL || "http://ollama:11434";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5:1.5b";
 
-console.log(`Motore LLM: ${USE_ANTHROPIC ? "Anthropic (" + ANTHROPIC_MODEL + ")" : "Ollama (" + OLLAMA_URL + " - " + OLLAMA_MODEL + ")"}`);
+console.log(`Motore LLM: ${LLM_PROVIDER === "mistral" ? `Mistral (${MISTRAL_MODEL})` : `Ollama (${OLLAMA_URL} - ${OLLAMA_MODEL})`}`);
 console.log(`MCP URL: ${MCP_URL}`);
 
-// ── Importa Anthropic SDK solo se necessario ──────────────────────────────────
-let anthropic = null;
-if (USE_ANTHROPIC) {
-  const { default: Anthropic } = await import("@anthropic-ai/sdk");
-  anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
-}
+// ─── MCP helpers ─────────────────────────────────────────────────────────────
 
-// ── MCP helpers ───────────────────────────────────────────────────────────────
 let toolsCache = null;
 
 async function mcpCall(method, params = {}) {
@@ -66,123 +60,165 @@ async function callTool(name, args) {
   return content.map((c) => c.text ?? JSON.stringify(c)).join("\n");
 }
 
+// ─── Mistral chat ─────────────────────────────────────────────────────────────
+
+function mcpToolToMistral(tool) {
+  return {
+    type: "function",
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.inputSchema ?? { type: "object", properties: {} },
+    },
+  };
+}
+
+async function mistralChat(history, tools, model) {
+  let response;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    response = await fetch(MISTRAL_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${MISTRAL_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: model || MISTRAL_MODEL,
+        messages: history,
+        tools,
+        tool_choice: "auto",
+        max_tokens: 4096,
+        temperature: 0.3,
+      }),
+    });
+    if (response.status !== 429) break;
+    console.log(`[rate limit] attendo 2s (tentativo ${attempt + 1})`);
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Mistral error ${response.status}: ${err}`);
+  }
+  return await response.json();
+}
+
+// ─── Ollama chat ──────────────────────────────────────────────────────────────
+
+function mcpToolToOllama(tool) {
+  return {
+    type: "function",
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.inputSchema ?? { type: "object", properties: {} },
+    },
+  };
+}
+
+async function ollamaChat(history, tools, model) {
+  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: model || OLLAMA_MODEL,
+      messages: history,
+      tools,
+      stream: false,
+      options: { temperature: 0.3 },
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Ollama error ${res.status}: ${err}`);
+  }
+  return await res.json();
+}
+
+// ─── Agentic loop (provider-agnostico) ───────────────────────────────────────
+
 const SYSTEM_PROMPT = `Sei un assistente esperto di open data. Hai accesso a strumenti per interrogare portali CKAN.
 Quando l'utente chiede di cercare dataset, usa SEMPRE gli strumenti disponibili per interrogare dati reali.
 Il portale principale è https://www.dati.gov.it/opendata (Italia), ma puoi usare qualsiasi URL CKAN.
 Rispondi sempre in italiano in modo chiaro e conciso. Presenta i risultati in modo leggibile.
 Se trovi dataset rilevanti, mostra: nome, organizzazione, descrizione breve e link.`;
 
-// ── Motore Ollama ─────────────────────────────────────────────────────────────
-async function chatWithOllama(messages, model) {
+async function chatWithTools(messages, model) {
   const tools = await getTools();
-  const ollamaTools = tools.map((t) => ({
-    type: "function",
-    function: {
-      name: t.name,
-      description: t.description,
-      parameters: t.inputSchema ?? { type: "object", properties: {} },
-    },
-  }));
-
   const toolCallsLog = [];
-  let history = [{ role: "system", content: SYSTEM_PROMPT }, ...messages];
+
+  const history = [
+    { role: "system", content: SYSTEM_PROMPT },
+    ...messages.map((m) => ({ role: m.role, content: m.content })),
+  ];
 
   for (let round = 0; round < 5; round++) {
-    const res = await fetch(`${OLLAMA_URL}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: model || OLLAMA_MODEL,
-        messages: history,
-        tools: ollamaTools,
-        stream: false,
-        options: { temperature: 0.3 },
-      }),
-    });
-    if (!res.ok) throw new Error(`Ollama error ${res.status}: ${await res.text()}`);
-    const data = await res.json();
-    const msg = data.message;
+    if (round > 0) await new Promise(r => setTimeout(r, 1200));
+
+    let msg, finishReason;
+
+    if (LLM_PROVIDER === "mistral") {
+      const data = await mistralChat(history, tools.map(mcpToolToMistral), model);
+      msg = data.choices[0].message;
+      finishReason = data.choices[0].finish_reason;
+    } else {
+      const data = await ollamaChat(history, tools.map(mcpToolToOllama), model);
+      msg = data.message;
+      finishReason = msg.tool_calls?.length ? "tool_calls" : "stop";
+    }
+
     history.push(msg);
 
-    if (!msg.tool_calls || msg.tool_calls.length === 0) {
-      return { reply: msg.content, toolCalls: toolCallsLog };
+    // Risposta finale
+    if (finishReason === "stop" || finishReason === "end_turn" || !msg.tool_calls?.length) {
+      const reply = typeof msg.content === "string"
+        ? msg.content
+        : msg.content?.filter(b => b.type === "text").map(b => b.text).join("\n") ?? "";
+      return { reply, toolCalls: toolCallsLog };
     }
 
+    // Esegui tool calls
     for (const tc of msg.tool_calls) {
       const fnName = tc.function.name;
-      const fnArgs = tc.function.arguments ?? {};
+      const fnArgs = typeof tc.function.arguments === "string"
+        ? JSON.parse(tc.function.arguments)
+        : tc.function.arguments;
+
       console.log(`[tool] ${fnName}`, JSON.stringify(fnArgs).slice(0, 120));
       toolCallsLog.push({ tool: fnName, args: fnArgs });
+
       let result;
-      try { result = await callTool(fnName, fnArgs); }
-      catch (e) { result = `Errore: ${e.message}`; }
-      history.push({ role: "tool", content: result });
-    }
-  }
-  return { reply: "Nessuna risposta.", toolCalls: toolCallsLog };
-}
-
-// ── Motore Anthropic ──────────────────────────────────────────────────────────
-async function chatWithAnthropic(messages, model) {
-  const tools = await getTools();
-  const anthropicTools = tools.map((t) => ({
-    name: t.name,
-    description: t.description,
-    input_schema: t.inputSchema ?? { type: "object", properties: {} },
-  }));
-
-  const toolCallsLog = [];
-  let history = messages.map((m) => ({ role: m.role, content: m.content }));
-
-  for (let round = 0; round < 5; round++) {
-    const response = await anthropic.messages.create({
-      model: model || ANTHROPIC_MODEL,
-      max_tokens: 4096,
-      system: SYSTEM_PROMPT,
-      tools: anthropicTools,
-      messages: history,
-    });
-    history.push({ role: "assistant", content: response.content });
-
-    if (response.stop_reason === "end_turn") {
-      const text = response.content
-        .filter((b) => b.type === "text")
-        .map((b) => b.text)
-        .join("\n");
-      return { reply: text, toolCalls: toolCallsLog };
-    }
-
-    if (response.stop_reason === "tool_use") {
-      const toolResults = [];
-      for (const block of response.content) {
-        if (block.type !== "tool_use") continue;
-        console.log(`[tool] ${block.name}`, JSON.stringify(block.input).slice(0, 120));
-        toolCallsLog.push({ tool: block.name, args: block.input });
-        let result;
-        try { result = await callTool(block.name, block.input); }
-        catch (e) { result = `Errore: ${e.message}`; }
-        toolResults.push({ type: "tool_result", tool_use_id: block.id, content: result });
+      try {
+        result = await callTool(fnName, fnArgs);
+      } catch (e) {
+        result = `Errore: ${e.message}`;
       }
-      history.push({ role: "user", content: toolResults });
+
+      // Formato risposta tool diverso tra Mistral e Ollama
+      if (LLM_PROVIDER === "mistral") {
+        history.push({ role: "tool", tool_call_id: tc.id, name: fnName, content: result });
+      } else {
+        history.push({ role: "tool", content: result });
+      }
     }
   }
-  return { reply: "Nessuna risposta.", toolCalls: toolCallsLog };
+
+  return { reply: "Nessuna risposta ottenuta.", toolCalls: toolCallsLog };
 }
 
-// ── Routes ────────────────────────────────────────────────────────────────────
-app.get("/api/models", async (req, res) => {
-  if (USE_ANTHROPIC) {
-    return res.json([
-      { name: "claude-haiku-4-5-20251001" },
-      { name: "claude-sonnet-4-6" },
+// ─── Routes ──────────────────────────────────────────────────────────────────
+
+app.get("/api/models", (req, res) => {
+  if (LLM_PROVIDER === "mistral") {
+    res.json([
+      { name: "mistral-small-latest" },
+      { name: "open-mistral-nemo" },
+      { name: "mistral-medium-latest" },
     ]);
-  }
-  try {
-    const r = await fetch(`${OLLAMA_URL}/api/tags`);
-    const data = await r.json();
-    res.json(data.models ?? []);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+  } else {
+    fetch(`${OLLAMA_URL}/api/tags`)
+      .then(r => r.json())
+      .then(data => res.json(data.models ?? []))
+      .catch(() => res.json([]));
   }
 });
 
@@ -198,11 +234,12 @@ app.get("/api/tools", async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   const { messages, model } = req.body;
   if (!messages?.length) return res.status(400).json({ error: "messages required" });
+  if (LLM_PROVIDER === "mistral" && !MISTRAL_API_KEY) {
+    return res.status(500).json({ error: "MISTRAL_API_KEY non impostata nel .env" });
+  }
   try {
-    const result = USE_ANTHROPIC
-      ? await chatWithAnthropic(messages, model)
-      : await chatWithOllama(messages, model);
-    res.json(result);
+    const { reply, toolCalls } = await chatWithTools(messages, model);
+    res.json({ reply, toolCalls });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: e.message });
@@ -211,11 +248,13 @@ app.post("/api/chat", async (req, res) => {
 
 app.get("/api/health", async (req, res) => {
   const status = { backend: "ok", ollama: "n/a", mcp: "unknown" };
-  if (!USE_ANTHROPIC) {
+  if (LLM_PROVIDER === "ollama") {
     try {
       await fetch(`${OLLAMA_URL}/api/tags`);
       status.ollama = "ok";
-    } catch { status.ollama = "error"; }
+    } catch {
+      status.ollama = "error";
+    }
   }
   try {
     await mcpCall("tools/list");
@@ -224,7 +263,8 @@ app.get("/api/health", async (req, res) => {
   res.json(status);
 });
 
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Backend pronto su http://localhost:${PORT}`);
-  console.log(`Raggiungibile su http://${SERVER_IP}:${PORT}`);
+  console.log(`Raggiungibile su http://${process.env.SERVER_IP || "0.0.0.0"}:${PORT}`);
 });
