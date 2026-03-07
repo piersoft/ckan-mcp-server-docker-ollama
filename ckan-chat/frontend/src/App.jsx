@@ -99,7 +99,7 @@ export default function App() {
       <aside className="sidebar">
         <div className="sidebar-logo">
           <div className="logo-icon">🇮🇹</div>
-          <span className="logo-text">Dati.gov.it<br />ChatBot</span>
+          <span className="logo-text">Demo<br />ChatBot</span>
         </div>
 
         <StatusBar health={health} onRefresh={fetchHealth} />
@@ -210,6 +210,9 @@ export default function App() {
           </div>
           <div className="input-hint">
             Invio per inviare · Shift+Invio per andare a capo
+          </div>
+          <div className="input-hint">
+            MCP Server backend by <a href="https://github.com/ondata/ckan-mcp-server/">OnData</a>
           </div>
         </div>
       </main>
