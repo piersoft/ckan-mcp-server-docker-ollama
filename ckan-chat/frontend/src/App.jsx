@@ -3,7 +3,7 @@ import ChatMessage from "./components/ChatMessage";
 import ToolCallBadge from "./components/ToolCallBadge";
 import StatusBar from "./components/StatusBar";
 
-const BACKEND_URL = import.meta.env.DEV ? (import.meta.env.VITE_BACKEND_URL || "http://localhost:3001") : "";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
 const SUGGESTIONS = [
   "Cerca dataset sulla qualità dell'aria",
@@ -21,6 +21,7 @@ export default function App() {
   const [models, setModels] = useState([]);
   const [health, setHealth] = useState(null);
   const [toolCalls, setToolCalls] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -32,6 +33,16 @@ export default function App() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  // Chiudi sidebar quando si clicca fuori su mobile
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const handler = (e) => {
+      if (!e.target.closest(".sidebar")) setSidebarOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [sidebarOpen]);
 
   async function fetchHealth() {
     try {
@@ -53,6 +64,7 @@ export default function App() {
 
   async function sendMessage(text) {
     if (!text.trim() || loading) return;
+    setSidebarOpen(false);
 
     const userMsg = { role: "user", content: text };
     const newMessages = [...messages, userMsg];
@@ -65,22 +77,14 @@ export default function App() {
       const r = await fetch(`${BACKEND_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: newMessages,
-          model: model || undefined,
-        }),
+        body: JSON.stringify({ messages: newMessages, model: model || undefined }),
       });
-
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const data = await r.json();
-
       setMessages([...newMessages, { role: "assistant", content: data.reply }]);
       setToolCalls(data.toolCalls ?? []);
     } catch (e) {
-      setMessages([
-        ...newMessages,
-        { role: "assistant", content: `❌ Errore: ${e.message}` },
-      ]);
+      setMessages([...newMessages, { role: "assistant", content: `❌ Errore: ${e.message}` }]);
     } finally {
       setLoading(false);
       inputRef.current?.focus();
@@ -96,45 +100,50 @@ export default function App() {
 
   return (
     <div className="app">
-      <aside className="sidebar">
+      {/* Bottone toggle sidebar su mobile */}
+      <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
+        ☰
+      </button>
+
+      {/* Overlay scuro dietro sidebar su mobile */}
+      <div
+        className={`sidebar-overlay ${sidebarOpen ? "open" : ""}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+
+      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-logo">
           <div className="logo-icon">🇮🇹</div>
-          <span className="logo-text">Demo<br />ChatBot</span>
+          <span className="logo-text">Demo<br />Chatbot</span>
         </div>
 
         <StatusBar health={health} onRefresh={fetchHealth} />
 
         <div className="sidebar-section">
-          <div className="section-label">MODELLO</div>
+          <div className="section-label">Modello</div>
           <select
             className="model-select"
             value={model}
             onChange={(e) => setModel(e.target.value)}
           >
-            {models.length === 0 && (
-              <option value="">Nessun modello trovato</option>
-            )}
+            {models.length === 0 && <option value="">Nessun modello trovato</option>}
             {models.map((m) => (
-              <option key={m.name} value={m.name}>
-                {m.name}
-              </option>
+              <option key={m.name} value={m.name}>{m.name}</option>
             ))}
           </select>
         </div>
 
         {toolCalls.length > 0 && (
           <div className="sidebar-section">
-            <div className="section-label">ULTIMA QUERY</div>
+            <div className="section-label">Ultima Query</div>
             <div className="tool-calls-list">
-              {toolCalls.map((tc, i) => (
-                <ToolCallBadge key={i} toolCall={tc} />
-              ))}
+              {toolCalls.map((tc, i) => <ToolCallBadge key={i} toolCall={tc} />)}
             </div>
           </div>
         )}
 
         <div className="sidebar-section suggestions-section">
-          <div className="section-label">SUGGERIMENTI</div>
+          <div className="section-label">Suggerimenti</div>
           {SUGGESTIONS.map((s, i) => (
             <button
               key={i}
@@ -147,10 +156,7 @@ export default function App() {
           ))}
         </div>
 
-        <button
-          className="clear-btn"
-          onClick={() => { setMessages([]); setToolCalls([]); }}
-        >
+        <button className="clear-btn" onClick={() => { setMessages([]); setToolCalls([]); }}>
           Nuova conversazione
         </button>
       </aside>
@@ -161,23 +167,18 @@ export default function App() {
             <div className="empty-state">
               <div className="empty-icon">🏛️</div>
               <h2>Esplora i dati aperti italiani</h2>
-              <p>
-                Chiedimi di cercare dataset su qualsiasi argomento.<br />
-                Interrogo direttamente dati.gov.it e altri portali CKAN.
-              </p>
+              <p>Chiedimi di cercare dataset su qualsiasi argomento.<br />
+                Interrogo direttamente dati.gov.it e altri portali CKAN.</p>
             </div>
           )}
 
-          {messages.map((msg, i) => (
-            <ChatMessage key={i} message={msg} />
-          ))}
+          {messages.map((msg, i) => <ChatMessage key={i} message={msg} />)}
 
           {loading && (
             <div className="message assistant">
+              <div className="message-avatar">◈</div>
               <div className="message-bubble loading-bubble">
-                <span className="dot" />
-                <span className="dot" />
-                <span className="dot" />
+                <span className="dot" /><span className="dot" /><span className="dot" />
               </div>
             </div>
           )}
@@ -209,10 +210,7 @@ export default function App() {
             </button>
           </div>
           <div className="input-hint">
-            Invio per inviare · Shift+Invio per andare a capo
-          </div>
-          <div className="input-hint">
-            MCP Server backend by <a href="https://github.com/ondata/ckan-mcp-server/">OnData</a>
+            Invio per inviare · Shift+Invio per andare a capo · MCP Server backend by <a href="https://ondata.it" target="_blank" rel="noopener">OnData</a>
           </div>
         </div>
       </main>
