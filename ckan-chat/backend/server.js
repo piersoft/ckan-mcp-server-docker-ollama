@@ -1,10 +1,28 @@
 import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
-
+import rateLimit from "express-rate-limit";
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: ["https://mcp.piersoftckan.biz"],
+  methods: ["GET", "POST"],
+}));
+
 app.use(express.json());
+
+app.use((req, res, next) => {
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Strict-Transport-Security", "max-age=31536000");
+  res.setHeader("Content-Security-Policy", "default-src 'self'");
+  next();
+});
+
+app.use("/api/chat", rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { error: "Troppe richieste, riprova tra un minuto." }
+}));
 
 // ─── Configurazione provider ──────────────────────────────────────────────────
 const LLM_PROVIDER = process.env.LLM_PROVIDER || "mistral"; // "mistral" | "ollama"
@@ -210,8 +228,6 @@ async function chatWithTools(messages, model) {
 app.get("/api/models", (req, res) => {
   if (LLM_PROVIDER === "mistral") {
     res.json([
-      { name: "mistral-small-latest" },
-      { name: "open-mistral-nemo" },
       { name: "mistral-medium-latest" },
     ]);
   } else {
@@ -231,9 +247,20 @@ app.get("/api/tools", async (req, res) => {
   }
 });
 
+const BLOCKLIST = ["ignore previous", "system prompt", "forget instructions",
+                   "new instructions", "disregard", "jailbreak"];
+
 app.post("/api/chat", async (req, res) => {
   const { messages, model } = req.body;
   if (!messages?.length) return res.status(400).json({ error: "messages required" });
+  // Sanitizzazione prompt injection
+  const lastMsg = messages[messages.length - 1]?.content ?? "";
+  if (typeof lastMsg !== "string" || lastMsg.length > 2000) {
+    return res.status(400).json({ error: "Messaggio non valido o troppo lungo" });
+  }
+  if (BLOCKLIST.some(p => lastMsg.toLowerCase().includes(p))) {
+    return res.status(400).json({ error: "Input non consentito" });
+  }
   if (LLM_PROVIDER === "mistral" && !MISTRAL_API_KEY) {
     return res.status(500).json({ error: "MISTRAL_API_KEY non impostata nel .env" });
   }
