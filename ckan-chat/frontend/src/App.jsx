@@ -64,6 +64,19 @@ export default function App() {
 
   async function sendMessage(text) {
     if (!text.trim() || loading) return;
+
+    // Sanitizzazione lato client
+    const blocklist = ["ignore previous", "system prompt", "forget instructions",
+                     "new instructions", "disregard", "jailbreak"];
+    if (blocklist.some(p => text.toLowerCase().includes(p))) {
+     alert("Input non valido.");
+     return;
+    }
+    if (text.length > 2000) {
+     alert("Messaggio troppo lungo (max 2000 caratteri).");
+     return;
+    }
+
     setSidebarOpen(false);
 
     const userMsg = { role: "user", content: text };
