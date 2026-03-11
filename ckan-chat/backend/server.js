@@ -2,11 +2,13 @@ import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
 import rateLimit from "express-rate-limit";
+
 const app = express();
-app.use(cors({
-  origin: ["https://mcp.piersoftckan.biz"],
-  methods: ["GET", "POST"],
-}));
+
+//app.use(cors({
+//  origin: ["https://mcp.piersoftckan.biz"],
+//  methods: ["GET", "POST"],
+//}));
 
 app.use(express.json());
 
@@ -29,18 +31,18 @@ const LLM_PROVIDER = process.env.LLM_PROVIDER || "mistral"; // "mistral" | "olla
 const MCP_URL = process.env.MCP_URL || "http://ckan-mcp-server:3000/mcp";
 
 // Mistral
-const MISTRAL_API_KEY   = process.env.MISTRAL_API_KEY;
-const MISTRAL_MODEL     = process.env.MISTRAL_MODEL || "mistral-small-latest";
-const MISTRAL_API_URL   = "https://api.mistral.ai/v1/chat/completions";
+const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
+const MISTRAL_MODEL   = process.env.MISTRAL_MODEL || "mistral-small-latest";
+const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
 
 // Ollama
-const OLLAMA_URL   = process.env.OLLAMA_URL || "http://ollama:11434";
+const OLLAMA_URL   = process.env.OLLAMA_URL   || "http://ollama:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5:1.5b";
 
 console.log(`Motore LLM: ${LLM_PROVIDER === "mistral" ? `Mistral (${MISTRAL_MODEL})` : `Ollama (${OLLAMA_URL} - ${OLLAMA_MODEL})`}`);
 console.log(`MCP URL: ${MCP_URL}`);
 
-// ─── MCP helpers ─────────────────────────────────────────────────────────────
+// ─── MCP helpers ──────────────────────────────────────────────────────────────
 
 let toolsCache = null;
 
@@ -134,9 +136,15 @@ function mcpToolToOllama(tool) {
 }
 
 async function ollamaChat(history, tools, model) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(process.env.OLLAMA_API_KEY
+      ? { Authorization: `Bearer ${process.env.OLLAMA_API_KEY}` }
+      : {}),
+  };
   const res = await fetch(`${OLLAMA_URL}/api/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({
       model: model || OLLAMA_MODEL,
       messages: history,
@@ -153,10 +161,6 @@ async function ollamaChat(history, tools, model) {
 }
 
 // ─── Guardrail: classificatore domanda ───────────────────────────────────────
-//
-// Prima di entrare nell'agentic loop, chiediamo al modello se la domanda
-// è pertinente al tema open data / CKAN. La risposta attesa è solo "SI" o "NO".
-// È una chiamata leggera, senza tools, con max_tokens bassissimo.
 
 const GUARDRAIL_PROMPT = `Sei un classificatore. Il tuo unico compito è decidere se la domanda dell'utente riguarda open data, dataset, portali dati, CKAN, dati aperti, statistiche pubbliche, API di dati, risorse informative pubbliche o argomenti correlati.
 Rispondi SOLO con la parola SI se la domanda è pertinente, oppure SOLO con la parola NO se non lo è.
@@ -181,13 +185,12 @@ async function isQuestionOnTopic(userMessage) {
           temperature: 0,
         }),
       });
-      if (!response.ok) return true; // in caso di errore, lascia passare
+      if (!response.ok) return true;
       const data = await response.json();
       const answer = data.choices?.[0]?.message?.content?.trim().toUpperCase() ?? "SI";
       console.log(`[guardrail] risposta classificatore: "${answer}"`);
       return answer.startsWith("SI");
     } else {
-      // Ollama - chiamata senza tools
       const res = await fetch(`${OLLAMA_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -201,7 +204,7 @@ async function isQuestionOnTopic(userMessage) {
           options: { temperature: 0, num_predict: 5 },
         }),
       });
-      if (!res.ok) return true; // in caso di errore, lascia passare
+      if (!res.ok) return true;
       const data = await res.json();
       const answer = data.message?.content?.trim().toUpperCase() ?? "SI";
       console.log(`[guardrail] risposta classificatore: "${answer}"`);
@@ -209,7 +212,7 @@ async function isQuestionOnTopic(userMessage) {
     }
   } catch (e) {
     console.error("[guardrail] errore classificatore, lascio passare:", e.message);
-    return true; // fallback permissivo in caso di errore di rete
+    return true;
   }
 }
 
@@ -237,8 +240,6 @@ FORMATO RISPOSTA:
 - Quando trovi dataset, mostra: nome, organizzazione, descrizione breve e link (view_url).
 `;
 
-// System prompt rafforzato per modelli Ollama piccoli (es. qwen2.5:1.5b)
-// Più direttivo e imperativo per compensare la limitata capacità di tool calling.
 const SYSTEM_PROMPT_OLLAMA = `Sei un assistente CKAN. Rispondi SOLO su open data e dataset.
 
 ISTRUZIONE OBBLIGATORIA: Per QUALSIASI domanda su dati, dataset o open data devi chiamare uno strumento prima di rispondere. Non rispondere MAI dal tuo addestramento interno.
@@ -256,11 +257,15 @@ ESEMPIO CORRETTO:
 Utente: "cerca dataset sull'aria"
 Tu: chiami ckan_package_search con q="aria" e server_url="https://www.dati.gov.it/opendata"
 
+LINK AI DATASET - REGOLA CRITICA:
+- Usa SEMPRE il campo "view_url" restituito dagli strumenti come link al dataset.
+- Se "view_url" non è disponibile, costruisci il link con il campo "id" (UUID) così:
+  https://www.dati.gov.it/view-dataset/dataset?id=<UUID>
+- NON usare MAI il formato /opendata/dataset/<nome-slug>: è SBAGLIATO.
+
 REGOLA ASSOLUTA: Se non chiami uno strumento, la tua risposta è sbagliata.
 Rispondi sempre in italiano.`;
 
-// Messaggio di nudge iniettato prima della prima chiamata Ollama
-// per ricordare al modello di usare i tool (workaround per modelli piccoli)
 function buildNudgeMessage(userQuestion) {
   return {
     role: "user",
@@ -268,7 +273,6 @@ function buildNudgeMessage(userQuestion) {
   };
 }
 
-// Messaggio di rimpronto se Ollama non ha chiamato tool al primo round
 const RETRY_MESSAGE = {
   role: "user",
   content: `[ERRORE: Non hai chiamato nessuno strumento. DEVI usare uno degli strumenti disponibili per cercare dati reali. Riprova chiamando ckan_package_search o un altro strumento CKAN adeguato.]`,
@@ -278,11 +282,9 @@ async function chatWithTools(messages, model) {
   const tools = await getTools();
   const toolCallsLog = [];
 
-  // Per Ollama usiamo il system prompt rafforzato e il nudge message
   const isOllama = LLM_PROVIDER === "ollama";
   const systemPrompt = isOllama ? SYSTEM_PROMPT_OLLAMA : SYSTEM_PROMPT;
 
-  // Costruisci la history: per Ollama sostituiamo l'ultimo messaggio utente con il nudge
   let historyMessages;
   if (isOllama && messages.length > 0) {
     const allButLast = messages.slice(0, -1).map(m => ({ role: m.role, content: m.content }));
@@ -296,8 +298,6 @@ async function chatWithTools(messages, model) {
     { role: "system", content: systemPrompt },
     ...historyMessages,
   ];
-
-  let ollamaToolMissedCount = 0; // contatore round senza tool call (solo Ollama)
 
   for (let round = 0; round < 6; round++) {
     if (round > 0) await new Promise(r => setTimeout(r, 1200));
@@ -314,18 +314,15 @@ async function chatWithTools(messages, model) {
       finishReason = msg.tool_calls?.length ? "tool_calls" : "stop";
     }
 
-    // ── Workaround Ollama: se al primo round non ha chiamato tool, rimpronta e riprova ──
     if (isOllama && round === 0 && finishReason === "stop" && toolCallsLog.length === 0) {
-      ollamaToolMissedCount++;
       console.log(`[ollama-nudge] round ${round}: nessun tool chiamato, inietto retry message`);
-      history.push(msg);           // tengo la risposta sbagliata in history
-      history.push(RETRY_MESSAGE); // aggiungo il rimpronto
-      continue;                    // riprova al prossimo round
+      history.push(msg);
+      history.push(RETRY_MESSAGE);
+      continue;
     }
 
     history.push(msg);
 
-    // Risposta finale (Mistral o Ollama dopo aver già usato tool o esaurito retry)
     if (finishReason === "stop" || finishReason === "end_turn" || !msg.tool_calls?.length) {
       const reply = typeof msg.content === "string"
         ? msg.content
@@ -336,7 +333,6 @@ async function chatWithTools(messages, model) {
       return { reply, toolCalls: toolCallsLog };
     }
 
-    // Esegui tool calls
     for (const tc of msg.tool_calls) {
       const fnName = tc.function.name;
       const fnArgs = typeof tc.function.arguments === "string"
@@ -353,7 +349,6 @@ async function chatWithTools(messages, model) {
         result = `Errore: ${e.message}`;
       }
 
-      // Formato risposta tool diverso tra Mistral e Ollama
       if (LLM_PROVIDER === "mistral") {
         history.push({ role: "tool", tool_call_id: tc.id, name: fnName, content: result });
       } else {
@@ -405,7 +400,6 @@ app.post("/api/chat", async (req, res) => {
   const { messages, model } = req.body;
   if (!messages?.length) return res.status(400).json({ error: "messages required" });
 
-  // Sanitizzazione prompt injection
   const lastMsg = messages[messages.length - 1]?.content ?? "";
   if (typeof lastMsg !== "string" || lastMsg.length > 2000) {
     return res.status(400).json({ error: "Messaggio non valido o troppo lungo" });
@@ -417,7 +411,6 @@ app.post("/api/chat", async (req, res) => {
     return res.status(500).json({ error: "MISTRAL_API_KEY non impostata nel .env" });
   }
 
-  // ── Guardrail: verifica pertinenza domanda ────────────────────────────────
   const onTopic = await isQuestionOnTopic(lastMsg);
   if (!onTopic) {
     console.log(`[guardrail] domanda fuori tema bloccata: "${lastMsg.slice(0, 80)}"`);
