@@ -76,7 +76,8 @@ services:
       context: ./ckan-chat/frontend
       dockerfile: Dockerfile
       args:
-        VITE_BACKEND_URL: http://${SERVER_IP:-localhost}:${BACKEND_PORT:-3001}
+        VITE_BACKEND_URL:
+        #VITE_BACKEND_URL: http://${SERVER_IP:-localhost}:${BACKEND_PORT:-3001}
         VITE_BASE_PATH: /chatbot/
     container_name: ckan-chat-frontend
     restart: unless-stopped
