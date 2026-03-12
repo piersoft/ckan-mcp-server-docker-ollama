@@ -68,7 +68,7 @@ services:
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:1.5b}
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
       # CORS: lascia vuoto per sviluppo locale, imposta dominio/IP per produzione
-      # Es: CORS_ORIGIN=https://mio-dominio.it oppure CORS_ORIGIN=http://31.14.139.9
+      # Es: CORS_ORIGIN=https://mio-dominio.it oppure CORS_ORIGIN=http://31.14.XX.X
       CORS_ORIGIN: ${CORS_ORIGIN:-}
     depends_on:
       - ckan-mcp-server
@@ -81,7 +81,7 @@ services:
       args:
         # Lascia vuoto se usi nginx reverse proxy sullo stesso server (consigliato)
         # Imposta lIP/dominio pubblico se accedi direttamente senza proxy
-        # Es: VITE_BACKEND_URL: http://31.14.139.9
+        # Es: VITE_BACKEND_URL: http://31.14.XX.X
         VITE_BACKEND_URL: ${VITE_BACKEND_URL:-}
         VITE_BASE_PATH: /chatbot/
     container_name: ckan-chat-frontend
